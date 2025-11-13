@@ -10,7 +10,6 @@ import torch
 
 def export_policy_as_jit(policy: object, normalizer: object | None, path: str, filename="policy.pt"):
     """Export policy into a Torch JIT file.
-
     Args:
         policy: The policy torch module.
         normalizer: The empirical normalizer module. If None, Identity is used.
@@ -25,7 +24,6 @@ def export_policy_as_onnx(
     policy: object, path: str, normalizer: object | None = None, filename="policy.onnx", verbose=False
 ):
     """Export policy into a Torch ONNX file.
-
     Args:
         policy: The policy torch module.
         normalizer: The empirical normalizer module. If None, Identity is used.
@@ -51,15 +49,7 @@ class _TorchPolicyExporter(torch.nn.Module):
         super().__init__()
         self.is_recurrent = policy.is_recurrent
         # copy policy parameters
-        self.estimator_enable = False
-        if hasattr(policy, "estimator"):
-            self.policy = copy.deepcopy(policy)
-            self.estimator = copy.deepcopy(policy.estimator)
-            # self.actor = copy.deepcopy(policy.actor)
-            self.actor = copy.deepcopy(policy.actor)
-            self.estimator_enable = True
-            self.one_step_idx = policy.one_step_idx
-        elif hasattr(policy, "actor"):
+        if hasattr(policy, "actor"):
             self.actor = copy.deepcopy(policy.actor)
             if self.is_recurrent:
                 self.rnn = copy.deepcopy(policy.memory_a.rnn)
@@ -105,16 +95,7 @@ class _TorchPolicyExporter(torch.nn.Module):
         return self.actor(x)
 
     def forward(self, x):
-    #     if self.estimator_enable:
-    #         lantent = self.estimator(self.normalizer(x))
-    #         lantent = lantent[:,:19]
-    #         return self.actor(torch.cat((x[:,self.one_step_idx],lantent), dim=-1))
-    #     else:
-    #         return self.actor(self.normalizer(x))
-        if self.estimator_enable:
-            return self.policy.dwaq_inference(self.normalizer(x))
-        else:
-            return self.actor(self.normalizer(x))
+        return self.actor(self.normalizer(x))
 
     @torch.jit.export
     def reset(self):
@@ -129,7 +110,6 @@ class _TorchPolicyExporter(torch.nn.Module):
         os.makedirs(path, exist_ok=True)
         path = os.path.join(path, filename)
         self.to("cpu")
-        self.eval()
         traced_script_module = torch.jit.script(self)
         traced_script_module.save(path)
 
@@ -142,13 +122,7 @@ class _OnnxPolicyExporter(torch.nn.Module):
         self.verbose = verbose
         self.is_recurrent = policy.is_recurrent
         # copy policy parameters
-        self.estimator_enable = False
-        if hasattr(policy, "estimator"):
-            self.policy = copy.deepcopy(policy)
-            # self.actor = copy.deepcopy(policy.actor)
-            self.actor = copy.deepcopy(policy.estimator)
-            self.estimator_enable = True
-        elif hasattr(policy, "actor"):
+        if hasattr(policy, "actor"):
             self.actor = copy.deepcopy(policy.actor)
             if self.is_recurrent:
                 self.rnn = copy.deepcopy(policy.memory_a.rnn)
@@ -187,10 +161,7 @@ class _OnnxPolicyExporter(torch.nn.Module):
         return self.actor(x), h
 
     def forward(self, x):
-        if self.estimator_enable:
-            return self.policy.dwaq_inference(self.normalizer(x))
-        else:
-            return self.actor(self.normalizer(x))
+        return self.actor(self.normalizer(x))
 
     def export(self, path, filename):
         self.to("cpu")

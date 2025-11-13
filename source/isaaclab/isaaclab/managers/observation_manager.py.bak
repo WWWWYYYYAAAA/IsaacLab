@@ -415,23 +415,17 @@ class ObservationManager(ManagerBase):
                     )
                     circular_buffer.append(obs)
 
-                # if term_cfg.flatten_history_dim:
-                #     group_obs[term_name] = circular_buffer.buffer.reshape(self._env.num_envs, -1)
-                # else:
-                #     group_obs[term_name] = circular_buffer.buffer
-                group_obs[term_name] = circular_buffer.buffer
+                if term_cfg.flatten_history_dim:
+                    group_obs[term_name] = circular_buffer.buffer.reshape(self._env.num_envs, -1)
+                else:
+                    group_obs[term_name] = circular_buffer.buffer
             else:
                 group_obs[term_name] = obs
 
         # concatenate all observations in the group together
         if self._group_obs_concatenate[group_name]:
             # set the concatenate dimension, account for the batch dimension if positive dimension is given
-            if term_cfg.flatten_history_dim:
-                obs_temp = torch.cat(list(group_obs.values()), dim=self._group_obs_concatenate_dim[group_name])
-                obs_temp = obs_temp.reshape(self._env.num_envs, -1)
-                return obs_temp
-            else:
-                return torch.cat(list(group_obs.values()), dim=self._group_obs_concatenate_dim[group_name])
+            return torch.cat(list(group_obs.values()), dim=self._group_obs_concatenate_dim[group_name])
         else:
             return group_obs
 
