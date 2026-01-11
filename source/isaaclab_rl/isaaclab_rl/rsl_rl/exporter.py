@@ -58,7 +58,7 @@ class _TorchPolicyExporter(torch.nn.Module):
             # self.actor = copy.deepcopy(policy.actor)
             self.actor = copy.deepcopy(policy.actor)
             self.estimator_enable = True
-            self.one_step_idx = policy.one_step_idx
+            # self.one_step_idx = policy.one_step_idx
         elif hasattr(policy, "actor"):
             self.actor = copy.deepcopy(policy.actor)
             if self.is_recurrent:

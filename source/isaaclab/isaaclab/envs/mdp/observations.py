@@ -246,6 +246,41 @@ def joint_vel(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("
     return asset.data.joint_vel[:, asset_cfg.joint_ids]
 
 
+def feet_body_pos_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
+
+    asset: RigidObject = env.scene[asset_cfg.name]
+    cur_footpos_translated = asset.data.body_pos_w[:, asset_cfg.body_ids, :] - asset.data.root_pos_w[:, :].unsqueeze(1)
+    footpos_in_body_frame = torch.zeros(env.num_envs, len(asset_cfg.body_ids)* 3, device=env.device)
+    
+    for i in range(len(asset_cfg.body_ids)):
+        footpos_in_body_frame[:, i:i+3] = math_utils.quat_apply_inverse(
+            asset.data.root_quat_w, cur_footpos_translated[:, i, :]
+        )
+    return footpos_in_body_frame
+
+def foot_height_scan(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, offset: float = 0.0) -> torch.Tensor:
+    """Height scan from the given sensor w.r.t. the sensor's frame.
+
+    The provided offset (Defaults to 0.5) is subtracted from the returned values.
+    """
+    # extract the used quantities (to enable type-hinting)
+    sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+    # height scan: height = sensor_height - hit_point_z - offset
+    return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - offset
+        
+def feet_body_vel_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
+
+    asset: RigidObject = env.scene[asset_cfg.name]
+    cur_footvel_translated = asset.data.body_lin_vel_w[:, asset_cfg.body_ids, :] - asset.data.root_lin_vel_w[
+        :, :
+    ].unsqueeze(1)
+    footvel_in_body_frame = torch.zeros(env.num_envs, len(asset_cfg.body_ids)* 3, device=env.device)
+    for i in range(len(asset_cfg.body_ids)):
+        footvel_in_body_frame[:, i:i+3] = math_utils.quat_apply_inverse(
+            asset.data.root_quat_w, cur_footvel_translated[:, i, :]
+        )
+    return footvel_in_body_frame
+
 @generic_io_descriptor(
     observation_type="JointState",
     on_inspect=[record_joint_names, record_dtype, record_shape, record_joint_vel_offsets],
