@@ -722,3 +722,14 @@ def current_time_s(env: ManagerBasedRLEnv) -> torch.Tensor:
 def remaining_time_s(env: ManagerBasedRLEnv) -> torch.Tensor:
     """The maximum time remaining in the episode (in seconds)."""
     return env.max_episode_length_s - env.episode_length_buf.unsqueeze(1) * env.step_dt
+
+def link_mass_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"), offset: float = 1.0) -> torch.Tensor:
+    """Root height in the simulation world frame."""
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+    if asset_cfg.body_ids == slice(None):
+            body_ids = torch.arange(asset.num_bodies, dtype=torch.int, device="cpu")
+    else:
+        body_ids = torch.tensor(asset_cfg.body_ids, dtype=torch.int, device="cpu")
+    masses = (asset.root_physx_view.get_masses()[:,body_ids].to(env.device) - offset)/offset
+    return masses
