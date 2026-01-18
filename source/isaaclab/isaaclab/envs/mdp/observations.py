@@ -266,7 +266,7 @@ def foot_height_scan(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, offset: f
     # extract the used quantities (to enable type-hinting)
     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
     # height scan: height = sensor_height - hit_point_z - offset
-    return torch.mean(sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - offset, dim=-1).unsqueeze(1)
+    return torch.clamp(torch.mean(sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - offset, dim=-1), min=-1.5, max=1.5).unsqueeze(1)
         
 def feet_body_vel_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")):
 
